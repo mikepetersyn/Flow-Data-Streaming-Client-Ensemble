@@ -23,12 +23,17 @@ def create_default_parser():
 
     #----------------------------------------------------------- LAYER PARAMETER
     parser.add_argument('--layers', type=int, nargs='+', default=[1000, 1000, 1000, 1000, 1000])
-    parser.add_argument('--layers_meta', type=int, nargs='+', default=[1000, 1000, 1000, 1000])
+    parser.add_argument('--layers_meta', type=int, nargs='+', default=[1000, 1000, 1000])
 
     #----------------------------------- BATCH_SIZE, LEARNING_RATE, EPOCHS, ETC.
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=0.0001)
     parser.add_argument('--log_frequency', type=int, default=50)
+
+    parser.add_argument('--fixed_num_epochs', type=bool, default=True)
+    parser.add_argument('--epochs_windows', type=int, default=25)
+    parser.add_argument('--epochs_meta', type=int, default=15)
+
     #----------------------------------- OPTIMIZER
     parser.add_argument('--optimizer', type=str, default='SGD', choices=['Adam', 'SGD'])
 

@@ -57,8 +57,10 @@ class DNNManager(multiprocessing.Process):
             if self.input_queue.empty():
                 if self.dnn.dataset is None:
                     time.sleep(1)
-                else:
+                elif not self.FLAGS.fixed_num_epochs:
                     self.online_training()
+                else:
+                    time.sleep(1)
             else:
                 self.load_from_queue()
                 self.batch_results.append(self.dnn.test())

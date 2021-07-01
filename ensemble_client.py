@@ -156,8 +156,10 @@ class StreamClientEnsemble(client.Stream_Client):
               if self.window_manager.input_queue_lvl1.empty():
                   if self.meta_dnn.dataset is None:
                       time.sleep(1)
-                  else:
+                  elif not self.FLAGS.fixed_num_epochs:
                       self.meta_dnn.train()
+                  else:
+                      time.sleep(1)
               else:
                   y_pred_prob = self.window_manager.input_queue_lvl1.get()
                   lvl1_input = self.create_lvl1_input_vector(

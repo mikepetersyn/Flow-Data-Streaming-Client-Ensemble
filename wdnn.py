@@ -91,6 +91,8 @@ class WDNN:
 
     def train(self):
         batches_per_epoch_train = math.ceil(self.dataset.images.shape[0] / self.FLAGS.batch_size)
+        if self.FLAGS.fixed_num_epochs:
+            batches_per_epoch_train = self.FLAGS.epochs_windows * batches_per_epoch_train
         for _ in range(batches_per_epoch_train):
             self.sess.run(self.train_step, feed_dict=self.feed_dict())
 
