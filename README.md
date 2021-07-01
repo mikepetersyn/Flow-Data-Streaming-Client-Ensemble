@@ -1,5 +1,6 @@
 # Flow Data Streaming Client Ensemble
 Dependencies: Python version: 3.6+ (for used packages see [utils.py](utils.py))
+Remark: This code is largely based on the implementations from the [Flow Data ML Repositories](https://gitlab.cs.hs-fulda.de/flow-data-ml).
 
 ## Description and Usage
 
