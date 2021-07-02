@@ -80,13 +80,14 @@ class MetaDNN:
 
     def test(self):
         acc = 0.
-        res = []
+        y_pred_prob = []
         batches_per_epoch_test = math.ceil(self.dataset.images.shape[0] / self.FLAGS.batch_size)  # how many batches per test epoch
         for _ in range(batches_per_epoch_test):  # test for a full test epoch
-            acc += self.sess.run(self.accuracy_tr, feed_dict=self.feed_dict(test=True))
-            res.append(self.sess.run(self.get_pred_prob, feed_dict=self.feed_dict(test=True)))
+            batch_acc, batch_y_pred_prob = self.sess.run(fetches=[self.accuracy_tr, self.get_pred_prob], feed_dict=self.feed_dict(test=True))
+            acc += batch_acc
+            y_pred_prob.append(batch_y_pred_prob)
         acc /= batches_per_epoch_test
-        return acc, res
+        return acc, y_pred_prob
 
     def build_dnn(self):
         import tensorflow as tf
