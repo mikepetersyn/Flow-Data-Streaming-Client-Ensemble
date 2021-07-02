@@ -13,7 +13,9 @@ class WindowManager:
         self.FLAGS = None
         self.arg_parse()
         self.windows: List[DNNManager] = []
-        self.window_collector = {}
+        self.y_pred_prob_collector = {}
+        self.ys_collector = {}
+        self.acc_collector = {}
         self.output_queue_lvl0: multiprocessing.Queue = multiprocessing.Queue()
         self.input_queue_lvl1: multiprocessing.Queue = multiprocessing.Queue()
         self.output_barrier = multiprocessing.Barrier(
@@ -31,7 +33,6 @@ class WindowManager:
         for window_size in self.FLAGS.windows:
             self.windows.append(
                 DNNManager(window_size=window_size,
-                           dnn=wdnn.WDNN(),
                            output_queue=self.output_queue_lvl0,
                            output_barrier=self.output_barrier))
 
@@ -42,10 +43,14 @@ class WindowManager:
 
     def collect_results_from_windows(self):
         for _ in range(len(self.FLAGS.windows)):
-            tmp = self.output_queue_lvl0.get()
-            self.window_collector.update(tmp)
-        self.input_queue_lvl1.put(copy.deepcopy(self.window_collector))
-        self.window_collector.clear()
+            acc, ys, y_pred_probs = self.output_queue_lvl0.get()
+            self.acc_collector.update(acc)
+            self.ys_collector.update(ys)
+            self.y_pred_prob_collector.update(y_pred_probs)
+        self.input_queue_lvl1.put((copy.deepcopy(self.acc_collector), copy.deepcopy(self.ys_collector), copy.deepcopy(self.y_pred_prob_collector)))
+        self.acc_collector.clear()
+        self.ys_collector.clear()
+        self.y_pred_prob_collector.clear()
         self.output_barrier.reset()
 
     def update_window_progresses(self):

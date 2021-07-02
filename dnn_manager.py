@@ -6,10 +6,11 @@ from typing import List
 import defaultParser
 import wdnn
 from utils import create_tf_dataset_lvl0
+import numpy as np
 
 
 class DNNManager(multiprocessing.Process):
-    def __init__(self, window_size, dnn: wdnn.WDNN, output_queue, output_barrier):
+    def __init__(self, window_size, output_queue, output_barrier):
         multiprocessing.Process.__init__(self)
 
         self.FLAGS = None
@@ -17,7 +18,7 @@ class DNNManager(multiprocessing.Process):
 
         self.window_size = window_size
 
-        self.dnn = dnn
+        self.dnn = None
 
         self.management_queue: multiprocessing.Queue = multiprocessing.Queue()
         self.input_queue: multiprocessing.Queue = multiprocessing.Queue()
@@ -50,7 +51,7 @@ class DNNManager(multiprocessing.Process):
 
 
     def run(self):
-        self.dnn.build_dnn()
+        self.dnn = wdnn.WDNN()
         while True:
             if self.window_size != 0:
                 self.check_window_progress()
@@ -63,8 +64,9 @@ class DNNManager(multiprocessing.Process):
                     time.sleep(1)
             else:
                 self.load_from_queue()
-                self.batch_results.append(self.dnn.test())
-                self.output_queue.put({self.window_size: copy.deepcopy(self.batch_results.pop())})
+                acc, ys, y_pred_prob = self.dnn.test()
+                y_pred_prob = np.array(y_pred_prob).reshape(-1, 3)[:self.dnn.dataset.images.shape[0]]
+                self.output_queue.put(({self.window_size: acc}, {self.window_size: ys}, {self.window_size: y_pred_prob}))
                 self.output_barrier.wait()
                 self.online_training()
 

@@ -24,6 +24,9 @@ class MetaDNN:
         self.keep_prob_hidden = None
         self.logits = None
         self.train_step = None
+        self.correct_prediction_tr = None
+        self.accuracy_tr = None
+        self.get_prediction = None
         self.get_pred_prob = None
 
         self.class_weights = None
@@ -40,7 +43,7 @@ class MetaDNN:
 
     def _init_dnn_parameter(self):
         """ evaluate input parameter for the DNN configuration """
-        num_features = 2 + (len(self.FLAGS.windows)*len(self.FLAGS.boundaries))
+        num_features = (len(self.FLAGS.windows)*len(self.FLAGS.boundaries))
         self.input_size = num_features
         self.num_classes = len(self.FLAGS.boundaries)
 
@@ -48,10 +51,10 @@ class MetaDNN:
         """ feed dict function """
         if not test:
           xs, ys = self.dataset.next_batch(self.FLAGS.batch_size)
-          k_h = self.FLAGS.dropout_hidden
-          k_i = self.FLAGS.dropout_input
+          k_h = self.FLAGS.dropout_hidden_meta
+          k_i = self.FLAGS.dropout_input_meta
         else:
-            xs, ys = self.dataset.next_batch(self.dataset.images.shape[0], shuffle=shuffle)
+            xs, ys = self.dataset.next_batch(self.FLAGS.batch_size, shuffle=shuffle)
             k_h = 1.0
             k_i = 1.0
 
@@ -76,7 +79,14 @@ class MetaDNN:
             self.sess.run(self.train_step, feed_dict=self.feed_dict())
 
     def test(self):
-        return self.sess.run(self.get_pred_prob, feed_dict=self.feed_dict(test=True))
+        acc = 0.
+        res = []
+        batches_per_epoch_test = math.ceil(self.dataset.images.shape[0] / self.FLAGS.batch_size)  # how many batches per test epoch
+        for _ in range(batches_per_epoch_test):  # test for a full test epoch
+            acc += self.sess.run(self.accuracy_tr, feed_dict=self.feed_dict(test=True))
+            res.append(self.sess.run(self.get_pred_prob, feed_dict=self.feed_dict(test=True)))
+        acc /= batches_per_epoch_test
+        return acc, res
 
     def build_dnn(self):
         import tensorflow as tf
@@ -161,12 +171,16 @@ class MetaDNN:
         else:
           avg_loss = tf.reduce_mean(cross_entropy_loss)  # no class weighting
 
-        if self.FLAGS.optimizer == 'Adam':
+        if self.FLAGS.optimizer_meta == 'Adam':
             self.train_step = tf.train.AdamOptimizer(self.FLAGS.learning_rate).minimize(avg_loss)
-        if self.FLAGS.optimizer == 'SGD':
+        if self.FLAGS.optimizer_meta == 'SGD':
             self.train_step = tf.train.GradientDescentOptimizer(self.FLAGS.learning_rate).minimize(avg_loss)
 
+        self.get_prediction = tf.argmax(self.logits, 1)
         self.get_pred_prob = tf.nn.softmax(self.logits)
+
+        self.correct_prediction_tr = tf.equal(tf.argmax(self.logits, 1), tf.argmax(self.y_, 1))
+        self.accuracy_tr = tf.reduce_mean(tf.cast(self.correct_prediction_tr, tf.float32))
         # endregion
 
         tf.global_variables_initializer().run()  # initialize all global variables

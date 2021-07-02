@@ -54,7 +54,7 @@ class StreamClientEnsemble(client.Stream_Client):
     client.Stream_Client.__init__(self)
 
     #-------------------------------------------------------------------------------------------------------- ARG PARSER
-    self.big_block_count = 1
+    self.big_block_count = 40
     self.block_count = 0
     self.FLAGS = None
     self.arg_parse()
@@ -115,10 +115,11 @@ class StreamClientEnsemble(client.Stream_Client):
       dt = datetime.fromtimestamp(timestamp)
       return [np.float32(dt.hour/24), np.float32(dt.minute/60)]
 
-  def create_lvl1_input_vector(self, timestamps, prob_arr, labels):
-      daytimes = [self.ts_to_daytime_feature(ts) for ts in timestamps]
+  @staticmethod
+  def create_lvl1_input_vector(timestamps, prob_arr, labels):
+      # daytimes = [self.ts_to_daytime_feature(ts) for ts in timestamps]
       prob_arr = np.concatenate(([prob_arr[window] for window in sorted(prob_arr.keys())]), axis=1)
-      return np.concatenate((daytimes, prob_arr, labels), axis=1)
+      return np.concatenate((prob_arr, labels), axis=1)
 
   def _loop(self):
     """
@@ -161,37 +162,42 @@ class StreamClientEnsemble(client.Stream_Client):
                   else:
                       time.sleep(1)
               else:
-                  y_pred_prob = self.window_manager.input_queue_lvl1.get()
+                  accs, ys, y_pred_probs = self.window_manager.input_queue_lvl1.get()
+
+                  labels_out = np.array(ys[0]).reshape(-1, 3)[:chunk.shape[0]]
+
                   lvl1_input = self.create_lvl1_input_vector(
                       timestamps,
-                      y_pred_prob,
-                      labels)
+                      y_pred_probs,
+                      labels_out)
 
                   self.meta_dnn.dataset = create_tf_dataset_lvl1(lvl1_input)
                   self.meta_dnn.class_weighting_block = class_weights
-                  y_pred_prob.update({99: self.meta_dnn.test()})
-                  self.meta_dnn.train()
+                  accs_meta, y_pred_probs_meta = self.meta_dnn.test()
 
-                  accuracies = self.get_model_acc(y_pred_prob, labels)
+                  y_pred_probs.update({99: y_pred_probs_meta})
+                  accs.update({99: accs_meta})
+
+                  self.meta_dnn.train()
 
                   print('test accuracy at superblock {} - block {} ({}): {}'.format(
                       self.big_block_count,
                       self.block_count,
                       str(datetime.fromtimestamp(timestamps[0])),
-                      [(window, accuracies[window]) for window in sorted(accuracies.keys())]))
+                      [(window, accs[window]) for window in sorted(accs.keys())]))
 
                   if self.csv_writer:
-                      self.csv_writer.writerow(
-                          [timestamps[0],
-                           self.big_block_count,
-                           self.block_count,
-                           [accuracies[window] for window in sorted(accuracies.keys())]])
+                      row = [timestamps[0], self.big_block_count, self.block_count]
+                      for window in sorted(accs.keys()):
+                          row.append(accs[window])
+                      self.csv_writer.writerow(row)
                       self.output_file.flush()
 
                   eval_data = {
-                      'y_pred_prob': y_pred_prob,
+                      'accuracies': accs,
+                      'y_pred_prob': y_pred_probs,
                       'timestamps': timestamps,
-                      'labels': labels}
+                      'labels': labels_out}
 
                   file = f'{export_path}/superblock-{self.big_block_count}_block-{self.block_count}.pkl'
                   with open(file, 'wb') as f:

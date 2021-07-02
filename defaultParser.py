@@ -21,6 +21,9 @@ def create_default_parser():
     parser.add_argument('--dropout_hidden', type=float, default=1)
     parser.add_argument('--dropout_input', type=float, default=1)
 
+    parser.add_argument('--dropout_hidden_meta', type=float, default=1.0)
+    parser.add_argument('--dropout_input_meta', type=float, default=1.0)
+
     #----------------------------------------------------------- LAYER PARAMETER
     parser.add_argument('--layers', type=int, nargs='+', default=[1000, 1000, 1000, 1000, 1000])
     parser.add_argument('--layers_meta', type=int, nargs='+', default=[1000, 1000, 1000])
@@ -31,17 +34,18 @@ def create_default_parser():
     parser.add_argument('--log_frequency', type=int, default=50)
 
     parser.add_argument('--fixed_num_epochs', type=bool, default=True)
-    parser.add_argument('--epochs_windows', type=int, default=25)
-    parser.add_argument('--epochs_meta', type=int, default=15)
+    parser.add_argument('--epochs_windows', type=int, default=5)
+    parser.add_argument('--epochs_meta', type=int, default=5)
 
     #----------------------------------- OPTIMIZER
-    parser.add_argument('--optimizer', type=str, default='SGD', choices=['Adam', 'SGD'])
+    parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD'])
+    parser.add_argument('--optimizer_meta', type=str, default='Adam', choices=['Adam', 'SGD'])
 
     #----------------------------------------------------- Ensemble Windows [sec]
     parser.add_argument('--main_buffer_size', type=int, default=900)
-    parser.add_argument('--buffer_block_size', type=int, default=25000)
+    parser.add_argument('--buffer_block_size', type=int, default=5000)
     #----------------------------------------------------- Ensemble Windows [x * 15min intervals]
-    parser.add_argument('--windows', type=int, nargs='+', default=[0, 6, 12, 24, 48])
+    parser.add_argument('--windows', type=int, nargs='+', default=[0, 6, 12])
 
     default_features = [
       '0-1',  # src_addr

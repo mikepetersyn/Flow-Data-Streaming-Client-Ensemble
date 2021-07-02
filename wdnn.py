@@ -29,11 +29,13 @@ class WDNN:
         self.correct_prediction_tr = None
         self.accuracy_tr = None
         self.get_prediction = None
+        self.get_pred_prob = None
 
         self.class_weights = None
 
         self.dataset = None
         self.class_weighting_block = None
+        self.build_dnn()
         # self.train_dataset = None
         # self.test_dataset = None
         # self.class_weighting_block_train = None
@@ -61,16 +63,16 @@ class WDNN:
         self.input_size = num_features
         self.num_classes = len(self.FLAGS.boundaries)
 
-    def feed_dict(self,test=False, shuffle=False):
-        """ feed dict function """
+    def feed_dict(self, test=False, shuffle=False):
+        ''' feed dict function '''
         if not test:
-          xs, ys = self.dataset.next_batch(self.FLAGS.batch_size)
+          xs, ys = self.dataset.next_batch(self.FLAGS.batch_size, shuffle=shuffle)
           k_h = self.FLAGS.dropout_hidden
           k_i = self.FLAGS.dropout_input
         else:
-            xs, ys = self.dataset.next_batch(self.dataset.images.shape[0], shuffle=shuffle)
-            k_h = 1.0
-            k_i = 1.0
+          xs, ys = self.dataset.next_batch(self.FLAGS.batch_size, shuffle=shuffle)
+          k_h = 1.0
+          k_i = 1.0
 
         feed_dict_ = {
             self.x: xs,  # data
@@ -78,7 +80,8 @@ class WDNN:
             self.keep_prob_input: k_i,  # dropout probability input layer
             self.keep_prob_hidden: k_h,  # dropout probability hidden layer
             }
-        if self.FLAGS.cw_method == 0:  # update feed dict with class weights
+
+        if self.FLAGS.cw_method == 0:  # udpate feed dict with class weights
           if not test:
             feed_dict_[self.class_weights] = self.class_weighting_block
           else:
@@ -97,7 +100,17 @@ class WDNN:
             self.sess.run(self.train_step, feed_dict=self.feed_dict())
 
     def test(self):
-        return self.sess.run(self.get_pred_prob, feed_dict=self.feed_dict(test=True))
+        acc = 0.
+        y = []
+        y_pred_prob = []
+        batches_per_epoch_test = math.ceil(self.dataset.images.shape[0] / self.FLAGS.batch_size)  # how many batches per test epoch
+        for _ in range(batches_per_epoch_test):  # test for a full test epoch
+            batch_acc, batch_y, batch_y_pred_prob= self.sess.run(fetches=[self.accuracy_tr, self.y_, self.get_pred_prob], feed_dict=self.feed_dict(test=True))
+            acc += batch_acc
+            y.append(batch_y)
+            y_pred_prob.append(batch_y_pred_prob)
+        acc /= batches_per_epoch_test
+        return acc, y, y_pred_prob
 
     def build_dnn(self):
         import tensorflow as tf
