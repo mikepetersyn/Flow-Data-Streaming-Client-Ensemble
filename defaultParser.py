@@ -34,8 +34,8 @@ def create_default_parser():
     parser.add_argument('--log_frequency', type=int, default=50)
 
     parser.add_argument('--fixed_num_epochs', type=bool, default=True)
-    parser.add_argument('--epochs_windows', type=int, default=5)
-    parser.add_argument('--epochs_meta', type=int, default=5)
+    parser.add_argument('--epochs_windows', type=int, default=1)
+    parser.add_argument('--epochs_meta', type=int, default=1)
 
     #----------------------------------- OPTIMIZER
     parser.add_argument('--optimizer', type=str, default='Adam', choices=['Adam', 'SGD'])

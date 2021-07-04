@@ -54,7 +54,7 @@ class StreamClientEnsemble(client.Stream_Client):
     client.Stream_Client.__init__(self)
 
     #-------------------------------------------------------------------------------------------------------- ARG PARSER
-    self.big_block_count = 40
+    self.big_block_count = 1
     self.block_count = 0
     self.FLAGS = None
     self.arg_parse()
@@ -137,12 +137,13 @@ class StreamClientEnsemble(client.Stream_Client):
 
       dataset, class_weights = self.load_from_buffer()
 
-      mini_block_size = self.get_mini_block_size(dataset)
+      # mini_block_size = self.get_mini_block_size(dataset)
+      # print(mini_block_size)
 
-      num_batches = math.ceil(dataset.shape[0] / mini_block_size)
+      num_batches = math.ceil(dataset.shape[0] / self.FLAGS.buffer_block_size)
       print(f'big block is split into {num_batches} mini blocks')
 
-      for chunk in self.chunker(dataset, mini_block_size):
+      for chunk in self.chunker(dataset, self.FLAGS.buffer_block_size):
           timestamps = chunk[:, 0]
           labels = chunk[:, -3:]
 
